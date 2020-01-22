@@ -299,7 +299,7 @@ def save(operator, context, filepath,
     scene = context.scene
     obj = context.window.scene.objects[0]
     context.view_layer.objects.active = obj
-    obj.select = True
+    obj.select_set(True)
     mesh = obj.to_mesh()
 
     # Apply the inverse transformation
