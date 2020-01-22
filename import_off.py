@@ -98,12 +98,9 @@ class ImportOFF(bpy.types.Operator, ImportHelper):
         scene = bpy.context.scene
         obj = bpy.data.objects.new(mesh.name, mesh)
         scene.collection.objects.link(obj)
-        scene.objects.active = obj
+        context.view_layer.objects.active = obj
 
         obj.matrix_world = global_matrix
-
-        #scene.update()
-
         return {'FINISHED'}
 
 class ExportOFF(bpy.types.Operator, ExportHelper):
