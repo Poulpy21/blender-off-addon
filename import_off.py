@@ -19,6 +19,7 @@
 #
 # http://wiki.blender.org/index.php/Dev:2.5/Py/Scripts/Guidelines/Addons
 #
+
 import os
 import bpy
 import mathutils
@@ -33,10 +34,6 @@ from bpy_extras.io_utils import (ImportHelper,
     unpack_face_list,
     axis_conversion,
     )
-
-#if "bpy" in locals():
-#    import imp
-#    if "import_off" in
 
 bl_info = {
     "name": "OFF format",
@@ -56,7 +53,7 @@ class ImportOFF(bpy.types.Operator, ImportHelper):
     bl_label = "Import OFF Mesh"
     filename_ext = ".off"
     filter_glob = StringProperty(
-        default="*.off",
+        default="*.off;*.noff;*.coff;*.ncoff",
         options={'HIDDEN'},
     )
 
@@ -148,6 +145,11 @@ class ExportOFF(bpy.types.Operator, ExportHelper):
             description="Export the active vertex color layer",
             default=False,
             )
+    use_normals = BoolProperty(
+            name="Normals",
+            description="Export the normals",
+            default=False,
+            )
 
     def execute(self, context):
         keywords = self.as_keywords(ignore=('axis_forward',
@@ -177,24 +179,28 @@ def unregister():
     bpy.types.INFO_MT_file_import.remove(menu_func_import)
     bpy.types.INFO_MT_file_export.remove(menu_func_export)
 
+# ordering: vx vy vz nx ny nz r g b a
 def load(operator, context, filepath):
     # Parse mesh from OFF file
-    # TODO: Add support for NOFF and COFF
     filepath = os.fsencode(filepath)
     file = open(filepath, 'r')
+
     first_line = file.readline().rstrip()
     use_colors = (first_line == 'COFF')
-    colors = []
+    use_normals = (first_line == 'NOFF')
+    use_colors_and_normals = (first_line == 'NCOFF')
     
     # handle blank and comment lines after the first line
     line = file.readline()
     while line.isspace() or line[0]=='#':
         line = file.readline()
-
     vcount, fcount, ecount = [int(x) for x in line.split()]
+
     verts = []
     facets = []
     edges = []
+    colors = []
+    normals = []
     i=0;
     while i<vcount:
         line = file.readline()
@@ -205,8 +211,36 @@ def load(operator, context, filepath):
              px = bits[0]
              py = bits[1]
              pz = bits[2]
-             if use_colors:
-                 colors.append([float(bits[3]) / 255, float(bits[4]) / 255, float(bits[5]) / 255])
+             if use_normals:
+                 assert len(bits) == 6
+                 nx = bits[3]
+                 ny = bits[4]
+                 nz = bits[5]
+                 normals.append((nx, ny, nz))
+             elif use_colors:
+                 cr = float(bits[3]) / 255
+                 cg = float(bits[4]) / 255
+                 cb = float(bits[5]) / 255
+                 if len(bits) == 6:
+                     ca = 255
+                 else:
+                     assert len(bits) == 7
+                     ca = float(bits[6]) / 255
+                 colors.append((cr, cg, cb, ca))
+             elif use_colors_and_normals:
+                 nx = bits[3]
+                 ny = bits[4]
+                 nz = bits[5]
+                 normals.append((nx, ny, nz))
+                 cr = float(bits[6]) / 255
+                 cg = float(bits[7]) / 255
+                 cb = float(bits[8]) / 255
+                 if len(bits) == 9:
+                     ca = 255
+                 else:
+                     assert len(bits) == 10
+                     ca = float(bits[9]) / 255
+                 colors.append([cr, cg, cb, ca])
 
         except ValueError:
             i=i+1
@@ -235,11 +269,6 @@ def load(operator, context, filepath):
     off_name = bpy.path.display_name_from_filepath(filepath)
     mesh = bpy.data.meshes.new(name=off_name)
     mesh.from_pydata(verts,edges,facets)
-    # mesh.vertices.add(len(verts))
-    # mesh.vertices.foreach_set("co", unpack_list(verts))
-
-    # mesh.faces.add(len(facets))
-    # mesh.faces.foreach_set("vertices", unpack_face_list(facets))
 
     mesh.validate()
     mesh.update()
@@ -248,13 +277,15 @@ def load(operator, context, filepath):
         color_data = mesh.vertex_colors.new()
         for i, facet in enumerate(mesh.polygons):
             for j, vidx in enumerate(facet.vertices):
-                color_data.data[3*i + j].color = colors[vidx]
+                color_data.data[3*i + j].color = colors[vidx][:-1]
 
     return mesh
 
 def save(operator, context, filepath,
     global_matrix = None,
-    use_colors = False):
+    use_colors = False,
+    use_normals = False):
+
     # Export the selected mesh
     APPLY_MODIFIERS = True # TODO: Make this configurable
     if global_matrix is None:
@@ -292,8 +323,12 @@ def save(operator, context, filepath,
     filepath = os.fsencode(filepath)
     fp = open(filepath, 'w')
 
-    if use_colors:
+    if use_colors and use_normals:
+        fp.write('NCOFF\n')
+    elif use_colors:
         fp.write('COFF\n')
+    elif use_normals:
+        fp.write('NOFF\n')
     else:
         fp.write('OFF\n')
 
@@ -301,8 +336,13 @@ def save(operator, context, filepath,
 
     for i, vert in enumerate(mesh.vertices):
         fp.write('%.16f %.16f %.16f' % vert.co[:])
-        if use_colors:
+        if use_colors and use_normals:
+            fp.write(' %.16f %.16f %.16f' % vert.normal[:])
             fp.write(' %d %d %d 255' % vertex_colors[i])
+        elif use_colors:
+            fp.write(' %d %d %d 255' % vertex_colors[i])
+        elif use_normals:
+            fp.write(' %.16f %.16f %.16f' % vert.normal[:])
         fp.write('\n')
 
     #for facet in facets:
