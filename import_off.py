@@ -335,14 +335,14 @@ def save(operator, context, filepath,
     fp.write('%d %d 0\n' % (len(verts), len(facets)))
 
     for i, vert in enumerate(mesh.vertices):
-        fp.write('%.16f %.16f %.16f' % vert.co[:])
+        fp.write('%.17f %.17f %.17f' % vert.co[:])
         if use_colors and use_normals:
-            fp.write(' %.16f %.16f %.16f' % vert.normal[:])
+            fp.write(' %.17f %.17f %.17f' % vert.normal[:])
             fp.write(' %d %d %d 255' % vertex_colors[i])
         elif use_colors:
             fp.write(' %d %d %d 255' % vertex_colors[i])
         elif use_normals:
-            fp.write(' %.16f %.16f %.16f' % vert.normal[:])
+            fp.write(' %.17f %.17f %.17f' % vert.normal[:])
         fp.write('\n')
 
     #for facet in facets:
