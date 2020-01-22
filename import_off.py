@@ -99,7 +99,6 @@ class ImportOFF(bpy.types.Operator, ImportHelper):
         obj = bpy.data.objects.new(mesh.name, mesh)
         scene.collection.objects.link(obj)
         scene.objects.active = obj
-        obj.select = True
 
         obj.matrix_world = global_matrix
 
@@ -298,7 +297,8 @@ def save(operator, context, filepath,
         global_matrix = mathutils.Matrix()
     scene = context.scene
     obj = context.window.scene.objects[0]
-    context.view_layer.objects.active = obj    # 'obj' is the active object now
+    context.view_layer.objects.active = obj
+    obj.select = True
     mesh = obj.to_mesh()
 
     # Apply the inverse transformation
