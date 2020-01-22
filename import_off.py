@@ -274,6 +274,10 @@ def load(operator, context, filepath):
 
     mesh.validate()
     mesh.update()
+    
+    if use_normals:
+        mesh.use_auto_smooth = True
+        mesh.normals_split_custom_set_from_vertices(normals)
 
     if use_colors:
         color_data = mesh.vertex_colors.new()
