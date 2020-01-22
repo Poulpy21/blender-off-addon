@@ -97,7 +97,6 @@ class ImportOFF(bpy.types.Operator, ImportHelper):
 
         scene = bpy.context.scene
         obj = bpy.data.objects.new(mesh.name, mesh)
-        #scene.objects.link(obj)
         scene.collection.objects.link(obj)
         scene.objects.active = obj
         obj.select = True
@@ -298,10 +297,8 @@ def save(operator, context, filepath,
     if global_matrix is None:
         global_matrix = mathutils.Matrix()
     scene = context.scene
-    #obj = scene.objects.active
-    obj = bpy.context.window.scene.objects[0]
-    bpy.context.view_layer.objects.active = obj    # 'obj' is the active object now
-    #mesh = obj.to_mesh(scene, APPLY_MODIFIERS, 'PREVIEW')
+    obj = context.window.scene.objects[0]
+    context.view_layer.objects.active = obj    # 'obj' is the active object now
     mesh = obj.to_mesh()
 
     # Apply the inverse transformation
@@ -310,6 +307,7 @@ def save(operator, context, filepath,
 
     verts = mesh.vertices[:]
     facets = [ f for f in mesh.polygons ]
+
     # Collect colors by vertex id
     colors = False
     vertex_colors = None
